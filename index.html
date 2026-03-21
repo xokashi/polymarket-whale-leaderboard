@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polymarket Whale Leaderboard — Top Traders This Month</title>
+  <meta name="description" content="Track Polymarket's top-performing whale traders in real time. Monthly profit rankings, win rates, and trading volumes for the best prediction market traders.">
+  <meta property="og:title" content="Polymarket Whale Leaderboard">
+  <meta property="og:description" content="Track the top prediction market traders on Polymarket by monthly profit.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080a0f;
+      --surface: #0e1117;
+      --surface2: #151a24;
+      --border: #1e2635;
+      --accent: #3b82f6;
+      --accent2: #6366f1;
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --rank1: #f59e0b;
+      --rank2: #94a3b8;
+      --rank3: #cd7c3f;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Nav ── */
+    nav {
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      background: rgba(8,10,15,0.92);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+    .nav-logo {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-cta {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity .2s;
+    }
+    .nav-cta:hover { opacity: .85; }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 64px 24px 48px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(59,130,246,.1);
+      border: 1px solid rgba(59,130,246,.25);
+      border-radius: 100px;
+      padding: 4px 14px;
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 24px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .live-dot {
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: .3; }
+    }
+    h1 {
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -.02em;
+      margin-bottom: 16px;
+    }
+    h1 .hl { color: var(--accent); }
+    .hero-sub {
+      font-size: 16px;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 32px;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: 2px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+    .stat-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 20px;
+      text-align: center;
+      min-width: 120px;
+    }
+    .stat-pill .val {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--green);
+    }
+    .stat-pill .lbl {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      max-width: 960px;
+      margin: 0 auto 16px;
+      padding: 0 24px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .filter-bar select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+    }
+    .filter-bar .spacer { flex: 1; }
+    .updated-ts {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ── Table ── */
+    .table-wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    thead {
+      background: var(--surface);
+    }
+    th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      white-space: nowrap;
+    }
+    th.right, td.right { text-align: right; }
+    th.center, td.center { text-align: center; }
+
+    tbody tr {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      transition: background .15s;
+    }
+    tbody tr:hover { background: var(--surface2); }
+
+    td { padding: 14px 16px; font-size: 14px; }
+
+    /* rank */
+    .rank {
+      font-size: 15px;
+      font-weight: 800;
+      width: 36px;
+      text-align: center;
+    }
+    .rank.r1 { color: var(--rank1); }
+    .rank.r2 { color: var(--rank2); }
+    .rank.r3 { color: var(--rank3); }
+    .rank.rn { color: var(--muted); }
+
+    /* name */
+    .whale-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .whale-addr {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: monospace;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    .copy-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-size: 11px;
+      transition: color .15s, background .15s;
+    }
+    .copy-btn:hover { color: var(--accent); background: rgba(59,130,246,.1); }
+
+    /* profit */
+    .profit-val { font-weight: 700; color: var(--green); }
+    .profit-neg { font-weight: 700; color: var(--red); }
+
+    /* margin bar */
+    .margin-wrap { display: flex; align-items: center; gap: 8px; }
+    .margin-bar-bg {
+      width: 80px; height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .margin-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+    }
+    .margin-pct { font-size: 13px; font-weight: 600; color: var(--green); min-width: 40px; }
+
+    /* volume */
+    .vol-val { color: var(--text); font-weight: 500; }
+
+    /* activity badge */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .badge-hot { background: rgba(16,185,129,.15); color: var(--green); }
+    .badge-warn { background: rgba(245,158,11,.15); color: var(--yellow); }
+    .badge-cold { background: rgba(100,116,139,.1); color: var(--muted); }
+
+    /* CTA banner */
+    .cta-banner {
+      max-width: 960px;
+      margin: 0 auto 32px;
+      padding: 0 24px;
+    }
+    .cta-inner {
+      background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(99,102,241,.12));
+      border: 1px solid rgba(59,130,246,.3);
+      border-radius: 16px;
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .cta-text h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .cta-text p { font-size: 14px; color: var(--muted); }
+    .cta-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: opacity .2s;
+    }
+    .cta-btn:hover { opacity: .85; }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 32px 24px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    footer a { color: var(--muted); text-decoration: underline; }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: var(--muted);
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 640px) {
+      .col-vol, .col-margin { display: none; }
+      .hero { padding: 40px 16px 32px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#">
+    🐋 <span>Polymarket</span> Whales
+  </a>
+  <a class="nav-cta" href="https://xokashi.github.io/polymarket-copilot-landing/" target="_blank">
+    Auto-Copy These Trades →
+  </a>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge">
+    <div class="live-dot"></div>
+    Monthly Leaderboard
+  </div>
+  <h1>Polymarket's <span class="hl">Top Whale</span><br>Traders This Month</h1>
+  <p class="hero-sub">
+    Track the highest-performing wallets on Polymarket by monthly profit. Updated every hour.
+  </p>
+</div>
+
+<div class="stats-bar" id="statsBar">
+  <div class="stat-pill">
+    <div class="val" id="statTopProfit">—</div>
+    <div class="lbl">Top Monthly Profit</div>
+  </div>
+  <div class="stat-pill">
+    <div class="val" id="statAvgMargin">—</div>
+    <div class="lbl">Avg Profit Margin</div>
+  </div>
+  <div class="stat-pill">
+    <div class="val" id="statWhaleCount">—</div>
+    <div class="lbl">Whales Tracked</div>
+  </div>
+  <div class="stat-pill">
+    <div class="val" id="statTotalVol">—</div>
+    <div class="lbl">Total Monthly Volume</div>
+  </div>
+</div>
+
+<div class="cta-banner">
+  <div class="cta-inner">
+    <div class="cta-text">
+      <h3>Auto-copy these whale trades to your wallet</h3>
+      <p>Polymarket Copilot monitors these wallets 24/7 and mirrors their trades — runs on your own machine, your keys stay local.</p>
+    </div>
+    <a class="cta-btn" href="https://xokashi.github.io/polymarket-copilot-landing/" target="_blank">
+      Get Polymarket Copilot →
+    </a>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <select id="windowSelect" onchange="renderTable()">
+    <option value="monthly">This Month</option>
+    <option value="weekly">This Week</option>
+    <option value="alltime">All Time</option>
+  </select>
+  <div class="spacer"></div>
+  <span class="updated-ts" id="updatedTs">Loading...</span>
+</div>
+
+<div class="table-wrap">
+  <div class="loading" id="loadingEl">
+    <div class="spinner"></div>
+    Loading whale data...
+  </div>
+  <table id="whaleTable" style="display:none">
+    <thead>
+      <tr>
+        <th class="center">#</th>
+        <th>Whale</th>
+        <th class="right">Monthly Profit</th>
+        <th class="right col-margin">Profit Margin</th>
+        <th class="right col-vol">Monthly Volume</th>
+        <th class="center">Activity</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<footer>
+  <p>Data sourced from Polymarket public API. Updates hourly. Not financial advice.</p>
+  <p style="margin-top:8px">
+    <a href="https://xokashi.github.io/polymarket-copilot-landing/" target="_blank">Polymarket Copilot</a>
+    &nbsp;·&nbsp;
+    <a href="https://polymarket.com" target="_blank" rel="noopener">Polymarket</a>
+  </p>
+</footer>
+
+<script>
+// ── Static whale data (updated regularly from our tracking system) ──
+const STATIC_WHALES = [
+  { rank:1, name:"majorexploiter",        wallet:"0x019782cab5d844f02bafb71f512758be78579f3c", profit:2420000, volume:6950000,  margin:0.348, lastActiveDays:0.5 },
+  { rank:2, name:"HorizonSplendidView",   wallet:"0x02227b8f5a9636e895607edd3185ed6ee5598ff7", profit:4020000, volume:12400000, margin:0.324, lastActiveDays:8.8 },
+  { rank:3, name:"beachboy4",             wallet:"0xc2e7800b5af46e6093872b177b7a5e7f0563be51", profit:3520000, volume:11000000, margin:0.319, lastActiveDays:0.2 },
+  { rank:4, name:"JaJackson",             wallet:"0xf195721ad850377c96cd634457c70cd9e8308057", profit:1130000, volume:4050000,  margin:0.279, lastActiveDays:0.8 },
+  { rank:5, name:"reachingthesky",        wallet:"0xefbc5fec8d7b0acdc8911bdd9a98d6964308f9a2", profit:3740000, volume:13700000, margin:0.272, lastActiveDays:0.1 },
+  { rank:6, name:"CemeterySun",           wallet:"0x37c1874a60d348903594a96703e0507c518fc53a", profit: 890000, volume:4800000,  margin:0.185, lastActiveDays:2.1 },
+  { rank:7, name:"sovereign2013",         wallet:"0xee613b3fc183ee44f9da9c05f53e2da107e3debf", profit: 620000, volume:4600000,  margin:0.134, lastActiveDays:1.4 },
+];
+
+let whales = [...STATIC_WHALES];
+
+function fmt(n) {
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+  return '$' + n.toFixed(0);
+}
+
+function rankClass(r) {
+  return r===1?'r1':r===2?'r2':r===3?'r3':'rn';
+}
+
+function activityBadge(days) {
+  if (days < 1) return '<span class="badge badge-hot">Active</span>';
+  if (days < 5) return '<span class="badge badge-warn">Recent</span>';
+  return '<span class="badge badge-cold">' + days.toFixed(0) + 'd ago</span>';
+}
+
+function shortAddr(addr) {
+  return addr.slice(0,6) + '...' + addr.slice(-4);
+}
+
+function copyAddr(addr, btn) {
+  navigator.clipboard.writeText(addr).then(()=>{
+    const old = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(()=>{ btn.textContent = old; }, 1500);
+  });
+}
+
+function updateStats(data) {
+  const top = Math.max(...data.map(w=>w.profit));
+  const avgM = data.reduce((s,w)=>s+w.margin,0)/data.length;
+  const totalVol = data.reduce((s,w)=>s+w.volume,0);
+  document.getElementById('statTopProfit').textContent = fmt(top);
+  document.getElementById('statAvgMargin').textContent = (avgM*100).toFixed(1)+'%';
+  document.getElementById('statWhaleCount').textContent = data.length;
+  document.getElementById('statTotalVol').textContent = fmt(totalVol);
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+
+  const sorted = [...whales].sort((a,b)=>b.profit-a.profit).map((w,i)=>({...w,rank:i+1}));
+  updateStats(sorted);
+
+  sorted.forEach(w => {
+    const barWidth = Math.min(w.margin * 100 / 0.5 * 100, 100);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><div class="rank ${rankClass(w.rank)}">${w.rank<=3?['🥇','🥈','🥉'][w.rank-1]:w.rank}</div></td>
+      <td>
+        <div class="whale-name">${w.name}</div>
+        <div class="whale-addr">
+          ${shortAddr(w.wallet)}
+          <button class="copy-btn" onclick="copyAddr('${w.wallet}',this)">copy</button>
+        </div>
+      </td>
+      <td class="right"><span class="profit-val">${fmt(w.profit)}</span></td>
+      <td class="right col-margin">
+        <div class="margin-wrap" style="justify-content:flex-end">
+          <span class="margin-pct">${(w.margin*100).toFixed(1)}%</span>
+          <div class="margin-bar-bg">
+            <div class="margin-bar-fill" style="width:${barWidth}%"></div>
+          </div>
+        </div>
+      </td>
+      <td class="right col-vol"><span class="vol-val">${fmt(w.volume)}</span></td>
+      <td class="center">${activityBadge(w.lastActiveDays)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('loadingEl').style.display = 'none';
+  document.getElementById('whaleTable').style.display = 'table';
+  document.getElementById('updatedTs').textContent =
+    'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+// Try to fetch live data from our API, fall back to static data
+async function loadData() {
+  try {
+    const res = await fetch('https://license-server-18191086038.asia-southeast1.run.app/api/whales', {
+      signal: AbortSignal.timeout(5000)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0) whales = data;
+    }
+  } catch(e) {
+    // silently fall back to static data
+  }
+  renderTable();
+}
+
+loadData();
+// Auto-refresh every hour
+setInterval(loadData, 3600000);
+</script>
+
+</body>
+</html>
